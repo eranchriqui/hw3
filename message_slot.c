@@ -104,32 +104,44 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 
 //----------------------------------------------------------------
 static long device_ioctl(struct file *file,
-                         unsigned int ioctl_command_id,
-                         unsigned int channel_id) {
-    if (MSG_SLOT_CHANNEL != ioctl_command_id) {
+                         unsigned int ioctlCommandId,
+                         unsigned int channelId) {
+    if (MSG_SLOT_CHANNEL != ioctlCommandId) {
         return -EINVAL;
     }
-
-    // First channel.
+    // First channel made.
     if (messageSlot -> size == 0){
-        messageSlot -> curr -> id = channel_id;
-        messageSlot -> curr -> next = NULL;
+        messageSlot -> head -> id = channelId;
+        messageSlot -> head -> next = NULL;
+        messageSlot -> size ++;
         return SUCCESS;
     }
     // Not the first channel.
     else {
-        if (messageSlot ->curr -> id == channel_id){
+        // Stays on same channel.
+        if (messageSlot -> curr -> id == channelId){
             return SUCCESS;
         }
-        while (messageSlot -> curr -> next != NULL){
-
-
+        Channel* node = messageSlot -> head;
+        // Looking for channelId.
+        while (node -> next != NULL){
+            // Found the relevant channel node.
+            if (node -> id == channelId) {
+                messageSlot->curr = node;
+                break;
+            }
+            node = node -> next;
         }
-
-
-
+        if(node -> next == NULL) {
+            // No node with this channelId.
+            Channel* newNode = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
+            newNode -> id = channelId;
+            newNode -> next = NULL;
+            node -> next = newNode;
+            messageSlot -> curr = newNode;
+            messageSlot -> size ++;
+        }
     }
-
     return SUCCESS;
 }
 
