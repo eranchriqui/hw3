@@ -20,15 +20,3 @@
 #define TRUE 1
 
 #endif //HW3_MESSAGE_SLOT_H
-
-
-
-// The major device number.
-// We don't rely on dynamic registration
-// any more. We want ioctls to know this
-// number at compile time.
-
-// Set the message of the device driver
-
-
-#endif
