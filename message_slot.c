@@ -128,7 +128,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 //----------------------------------------------------------------
 static long device_ioctl(struct file *file,
                          unsigned int ioctlCommandId,
-                         unsigned int channelId) {
+                         unsigned long channelId) {
     if (MSG_SLOT_CHANNEL != ioctlCommandId || !channelId) {
         return -EINVAL;
     }
