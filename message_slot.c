@@ -18,45 +18,20 @@
 MODULE_LICENSE("GPL");
 
 
-struct message_slot {
-    char buffers[CHANNELS][BUF_SIZE];
-    int index;
-};
-
-typedef struct node {
-    int open;
-    int id;
-    struct message_slot data;
-    struct node* next;
-} node_t;
-
-
-typedef struct list
+typedef struct MessageSlot
 {
-    void* head;
+    file* desc;
+    Channel* head;
+    Channel* curr;
     size_t size;
-} list;
+} MessageSlot;
 
-typedef struct MsgSlotNode
+typedef struct Channel
 {
     int id;
-    list* channel_list;
-    struct MsgSlotNode* next;
-} MsgSlotNode;
-
-typedef struct ChannelNode
-{
-    int channel_id;
     char buffer[BUF_SIZE];
-    ssize_t msg_len;
-    struct ChannelNode* next;
-} ChannelNode;
-
-
-
-
-
-static node_t* head = NULL;
+    struct Channel* next;
+} Channel;
 
 
 
