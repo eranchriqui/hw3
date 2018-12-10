@@ -29,7 +29,8 @@ typedef struct MessageSlot
 typedef struct Channel
 {
     int id;
-    char buffer[BUF_SIZE];
+    char theMessage[BUF_SIZE];
+    int messageLen;
     struct Channel* next;
 } Channel;
 
@@ -72,13 +73,30 @@ static int device_release(struct inode *inode,
 //---------------------------------------------------------------
 static ssize_t device_read(struct file *file, char __user* buffer,size_t length, loff_t* offset )
 {
-    // read doesnt really do anything (for now)
-    printk( "Invocing device_read(%p,%d) - "
-            "operation not supported yet\n"
-            "(last written - %s)\n",
-            file, length, the_message );
-    //invalid argument error
-    return -EINVAL;
+    // No channel was set.
+    if (messageSlot -> size == 0){
+        return -EINVAL;
+    }
+    // No message.
+    if (!messageSlot -> curr -> messageLen){
+        return -EWOULDBLOCK;
+    }
+    // Buffer too small.
+    if (length < messageSlot -> curr-> messageLen){
+        return -ENOSPC;
+    }
+
+    int i;
+    char* theMessage = messageSlot -> curr -> theMessage;
+    printk("Invoking device_write(%p,%d)\n", file, length);
+    for( i = 0; i < length; ++i )
+    {
+        get_user(theMessage[i], &buffer[i]);
+    }
+    messageSlot -> curr -> messageLen = i;
+
+
+    return i;
 }
 
 //---------------------------------------------------------------
@@ -94,11 +112,12 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     }
 
     int i;
-    char* theMessage = messageSlot -> curr -> buffer;
-    printk("Invoking device_write(%p,%d)\n", file, length);
-    for( i = 0; i < length; ++i )
+    char* theMessage = messageSlot -> curr -> theMessage;
+    int messageLen = messageSlot -> curr -> messageLen;
+    printk("Invoking device_read(%p,%d)\n", file, length);
+    for( i = 0; i < messageLen; ++i )
     {
-        get_user(theMessage[i], &buffer[i]);
+        put_user(theMessage[i], &buffer[i]);
     }
 
     // return the number of input characters used
@@ -116,6 +135,7 @@ static long device_ioctl(struct file *file,
     // First channel made.
     if (messageSlot -> size == 0){
         messageSlot -> head -> id = channelId;
+        messageSlot -> head -> messageLen = 0;
         messageSlot -> head -> next = NULL;
         messageSlot -> size ++;
         return SUCCESS;
@@ -144,6 +164,7 @@ static long device_ioctl(struct file *file,
             }
             newNode -> id = channelId;
             newNode -> next = NULL;
+            newNode -> messageLen = 0;
             node -> next = newNode;
             messageSlot -> curr = newNode;
             messageSlot -> size ++;
@@ -190,7 +211,7 @@ static int __init simple_init(void) {
     messageSlot -> size = 0;
 
     printk(KERN_INFO "message_slot: registered major number %d\n", majorNumber);
-    return 0;
+    return SUCCESS;
 }
 
 

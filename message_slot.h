@@ -16,6 +16,8 @@
 #define DEVICE_FILE_NAME "message_slot_dev"
 #define SUCCESS 0
 #define NULL 0
+#define FALSE 0
+#define TRUE 1
 
 #endif //HW3_MESSAGE_SLOT_H
 
