@@ -70,8 +70,6 @@ static int device_release(struct inode *inode,
 }
 
 //---------------------------------------------------------------
-// a process which has already opened
-// the device file attempts to read from it
 static ssize_t device_read(struct file *file, char __user* buffer,size_t length, loff_t* offset )
 {
     // read doesnt really do anything (for now)
@@ -84,17 +82,23 @@ static ssize_t device_read(struct file *file, char __user* buffer,size_t length,
 }
 
 //---------------------------------------------------------------
-// a processs which has already opened
-// the device file attempts to write to it
 static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t*  offset) {
 
+    // No channel was set.
+    if (messageSlot -> size == 0){
+        return -EINVAL;
+    }
+    // Invalid length.
+    if (!length || length > BUF_SIZE){
+        return -EMSGSIZE;
+    }
+
     int i;
+    char* theMessage = messageSlot -> curr -> buffer;
     printk("Invoking device_write(%p,%d)\n", file, length);
-    for( i = 0; i < length && i < BUF_LEN; ++i )
+    for( i = 0; i < length; ++i )
     {
-        get_user(the_message[i], &buffer[i]);
-        if( 1 == encryption_flag )
-            the_message[i] += 1;
+        get_user(theMessage[i], &buffer[i]);
     }
 
     // return the number of input characters used
@@ -106,7 +110,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 static long device_ioctl(struct file *file,
                          unsigned int ioctlCommandId,
                          unsigned int channelId) {
-    if (MSG_SLOT_CHANNEL != ioctlCommandId) {
+    if (MSG_SLOT_CHANNEL != ioctlCommandId || !channelId) {
         return -EINVAL;
     }
     // First channel made.
@@ -135,6 +139,9 @@ static long device_ioctl(struct file *file,
         if(node -> next == NULL) {
             // No node with this channelId.
             Channel* newNode = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
+            if (!newNode){
+                return -EINVAL;
+            }
             newNode -> id = channelId;
             newNode -> next = NULL;
             node -> next = newNode;
@@ -172,7 +179,13 @@ static int __init simple_init(void) {
     }
 
     messageSlot = (MessageSlot *) kmalloc(sizeof(MessageSlot), GFP_KERNEL);
+    if (!messageSlot){
+        return -EINVAL;
+    }
     messageSlot -> head = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
+    if (!messageSlot -> head){
+        return -EINVAL;
+    }
     messageSlot -> curr = head;
     messageSlot -> size = 0;
 
