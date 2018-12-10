@@ -15,6 +15,7 @@
 #define CHANNELS 4
 #define DEVICE_FILE_NAME "message_slot_dev"
 #define SUCCESS 0
+#define NULL 0
 
 #endif //HW3_MESSAGE_SLOT_H
 

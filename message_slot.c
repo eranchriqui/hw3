@@ -33,18 +33,9 @@ typedef struct Channel
     struct Channel* next;
 } Channel;
 
-
-
-// used to prevent concurent access into the same device
-static int dev_open_flag = 0;
-
+static MessageSlot* messageSlot;
 static struct chardev_info device_info;
 
-// The message the device will give when asked
-static char the_message[BUF_LEN];
-
-//Do we need to encrypt?
-static int encryption_flag = 0;
 
 //================== DEVICE FUNCTIONS ===========================
 static int device_open(struct inode *inode,
@@ -115,16 +106,27 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 static long device_ioctl(struct file *file,
                          unsigned int ioctl_command_id,
                          unsigned int channel_id) {
+    if (MSG_SLOT_CHANNEL != ioctl_command_id) {
+        return -EINVAL;
+    }
 
-
-    // Switch according to the ioctl called
-    if (MSG_SLOT_CHANNEL == ioctl_command_id) {
-        // Get the parameter given to ioctl by the process
-        ChannelNode current = head;
-        while (current -> next != NULL){
-            current = current -> next;
+    // First channel.
+    if (messageSlot -> size == 0){
+        messageSlot -> curr -> id = channel_id;
+        messageSlot -> curr -> next = NULL;
+        return SUCCESS;
+    }
+    // Not the first channel.
+    else {
+        if (messageSlot ->curr -> id == channel_id){
+            return SUCCESS;
         }
-        current -> next = kmalloc(sizeof(ChannelNode), GFP_KERNEL);
+        while (messageSlot -> curr -> next != NULL){
+
+
+        }
+
+
 
     }
 
@@ -146,18 +148,23 @@ struct file_operations Fops =
 
 //---------------------------------------------------------------
 static int __init simple_init(void) {
-    int rc = -1;
+    int majorNumber = -1;
 
     // Register driver capabilities. Obtain major num
-    rc = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &Fops);
+    majorNumber = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &Fops);
 
     // Negative values signify an error
-    if (rc < 0) {
+    if (majorNumber < 0) {
         printk(KERN_ERR "%s registraion failed for  %d\n", DEVICE_FILE_NAME, MAJOR_NUM );
-        return rc;
+        return majorNumber;
     }
 
-    printk(KERN_INFO "message_slot: registered major number %d\n", rc);
+    messageSlot = (MessageSlot *) kmalloc(sizeof(MessageSlot), GFP_KERNEL);
+    messageSlot -> head = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
+    messageSlot -> curr = head;
+    messageSlot -> size = 0;
+
+    printk(KERN_INFO "message_slot: registered major number %d\n", majorNumber);
     return 0;
 }
 
