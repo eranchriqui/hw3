@@ -8,23 +8,16 @@
 #define MODULE
 
 
+#include "message_slot.h"
+#include <linux/ioctl.h>
 #include <linux/kernel.h>   /* We're doing kernel work */
 #include <linux/module.h>   /* Specifically, a module */
+#include <linux/slab.h>
 #include <linux/fs.h>       /* for register_chrdev */
 #include <linux/uaccess.h>  /* for get_user and put_user */
 #include <linux/string.h>   /* for memset. NOTE - not string.h!*/
-#include "message_slot.h"
 
 MODULE_LICENSE("GPL");
-
-
-typedef struct MessageSlot
-{
-    file* desc;
-    Channel* head;
-    Channel* curr;
-    size_t size;
-} MessageSlot;
 
 typedef struct Channel
 {
@@ -34,39 +27,28 @@ typedef struct Channel
     struct Channel* next;
 } Channel;
 
+typedef struct MessageSlot
+{
+    Channel* head;
+    Channel* curr;
+    size_t size;
+} MessageSlot;
+
 static MessageSlot* messageSlot;
-static struct chardev_info device_info;
 
 
 //================== DEVICE FUNCTIONS ===========================
 static int device_open(struct inode *inode,
                        struct file *file) {
 
-    unsigned long flags; // for spinlock
     printk("Invoking device_open(%p)\n", file);
-
-    // We don't want to talk to two processes at the same time
-    spin_lock_irqsave(&device_info.lock, flags);
-    if (1 == dev_open_flag) {
-        spin_unlock_irqrestore(&device_info.lock, flags);
-        return -EBUSY;
-    }
-
-    ++dev_open_flag;
-    spin_unlock_irqrestore(&device_info.lock, flags);
     return SUCCESS;
 }
 
 //---------------------------------------------------------------
 static int device_release(struct inode *inode,
                           struct file *file) {
-    unsigned long flags; // for spinlock
     printk("Invoking device_release(%p,%p)\n", inode, file);
-
-    // ready for our next caller
-    spin_lock_irqsave(&device_info.lock, flags);
-    --dev_open_flag;
-    spin_unlock_irqrestore(&device_info.lock, flags);
     return SUCCESS;
 }
 
@@ -95,7 +77,6 @@ static ssize_t device_read(struct file *file, char __user* buffer,size_t length,
     }
     messageSlot -> curr -> messageLen = i;
 
-
     return i;
 }
 
@@ -117,7 +98,10 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     printk("Invoking device_read(%p,%d)\n", file, length);
     for( i = 0; i < messageLen; ++i )
     {
-        put_user(theMessage[i], &buffer[i]);
+       // if (-EFAULT == put_user(theMessage[i], &buffer[i])) {
+        //printk("error(%p)\n", file);
+        //return -EINVAL;
+        //}
     }
 
     // return the number of input characters used
@@ -170,6 +154,9 @@ static long device_ioctl(struct file *file,
             messageSlot -> size ++;
         }
     }
+
+    printk("Now on channel %d\n", file, messageSlot -> curr -> id);
+
     return SUCCESS;
 }
 
@@ -188,15 +175,15 @@ struct file_operations Fops =
 
 //---------------------------------------------------------------
 static int __init simple_init(void) {
-    int majorNumber = -1;
+    int rc = -1;
 
     // Register driver capabilities. Obtain major num
-    majorNumber = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &Fops);
+    rc = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &Fops);
 
     // Negative values signify an error
-    if (majorNumber < 0) {
+    if (rc < 0) {
         printk(KERN_ERR "%s registraion failed for  %d\n", DEVICE_FILE_NAME, MAJOR_NUM );
-        return majorNumber;
+        return rc;
     }
 
     messageSlot = (MessageSlot *) kmalloc(sizeof(MessageSlot), GFP_KERNEL);
@@ -207,10 +194,10 @@ static int __init simple_init(void) {
     if (!messageSlot -> head){
         return -EINVAL;
     }
-    messageSlot -> curr = head;
+    messageSlot -> curr = messageSlot -> head;
     messageSlot -> size = 0;
 
-    printk(KERN_INFO "message_slot: registered major number %d\n", majorNumber);
+    printk(KERN_INFO "message_slot: registered major number %d\n", MAJOR_NUM);
     return SUCCESS;
 }
 
