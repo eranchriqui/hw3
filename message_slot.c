@@ -223,7 +223,7 @@ static long device_ioctl(struct file *file,
             node = node -> next;
         }
 
-        // Repeating the check to check the last node too
+        // Repeating the check for the last node too
         if (node -> id == channelId) {
             printk("found the node with channelId %d\n", node->id);
             messageSlot->curr = node;
