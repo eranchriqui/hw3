@@ -218,11 +218,15 @@ static long device_ioctl(struct file *file,
         while (node -> next != NULL){
             // Found the relevant channel node.
             if (node -> id == channelId) {
-                printk("found the node with channelId %d\n",node -> id);
-                messageSlot->curr = node;
                 break;
             }
             node = node -> next;
+        }
+
+        // Repeating the check to check the last node too
+        if (node -> id == channelId) {
+            printk("found the node with channelId %d\n", node->id);
+            messageSlot->curr = node;
         }
         if(node -> id != channelId) {
             // No node with this channelId.
