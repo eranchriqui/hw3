@@ -2,7 +2,6 @@
 // Created by eran on 12/14/18.
 //
 
-#include "message_sender.h"
 #include "message_slot.h"
 #include <fcntl.h>      /* open */
 #include <unistd.h>     /* exit */

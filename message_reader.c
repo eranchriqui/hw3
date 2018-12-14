@@ -2,7 +2,6 @@
 // Created by eran on 12/14/18.
 //
 
-#include "message_reader.h"
 #include "message_slot.h"
 #include <fcntl.h>      /* open */
 #include <unistd.h>     /* exit */
@@ -27,17 +26,17 @@ int main(int argc, char* argv[]) {
         exit(-1);
     }
 
-    ret_val = ioctl(file_desc, MSG_SLOT_CHANNEL, argv[2]);
+    ret_val = ioctl(file_desc, MSG_SLOT_CHANNEL, atoi(argv[2]));
     if(ret_val < 0){
         exit(ret_val);
     }
 
-    ret_val =  read(file_desc, userMsg, BUF_SIZE);
+    ret_val = (int) read(file_desc, userMsg, BUF_SIZE);
     if(ret_val < 0){
         exit(ret_val);
     }
 
-    printf("%.*s\n", ret_val,userMsg);
+    printf("%.*s\n", ret_val, userMsg);
 
     close(file_desc);
     return 0;
