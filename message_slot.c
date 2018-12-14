@@ -42,6 +42,7 @@ static int device_open(struct inode *inode,
                        struct file *file) {
 
     printk("Invoking device_open(%p)\n", file);
+    printk("We have size %d\n", messageSlot -> size);
     return SUCCESS;
 }
 
@@ -53,19 +54,18 @@ static int device_release(struct inode *inode,
 }
 
 //---------------------------------------------------------------
-static ssize_t device_read(struct file *file, char __user* buffer,size_t length, loff_t* offset )
-{
+static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t*  offset) {
+
+    printk("Trying to write\n");
+
     // No channel was set.
     if (messageSlot -> size == 0){
+        printk("write if1\n");
         return -EINVAL;
     }
-    // No message.
-    if (!messageSlot -> curr -> messageLen){
-        return -EWOULDBLOCK;
-    }
-    // Buffer too small.
-    if (length < messageSlot -> curr-> messageLen){
-        return -ENOSPC;
+    // Invalid length.
+    if (!length || length > BUF_SIZE){
+        return -EMSGSIZE;
     }
 
     int i;
@@ -77,32 +77,39 @@ static ssize_t device_read(struct file *file, char __user* buffer,size_t length,
     }
     messageSlot -> curr -> messageLen = i;
 
+    printk("#now on channel %d hold %s == %s\n", messageSlot -> curr -> id, buffer, messageSlot -> curr -> theMessage);
     return i;
 }
 
 //---------------------------------------------------------------
-static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t*  offset) {
+static ssize_t device_read(struct file *file, char __user* buffer,size_t length, loff_t* offset ) {
 
     // No channel was set.
     if (messageSlot -> size == 0){
         return -EINVAL;
     }
-    // Invalid length.
-    if (!length || length > BUF_SIZE){
-        return -EMSGSIZE;
+    int i;
+    int messageLen = messageSlot -> curr -> messageLen;
+    char* theMessage = messageSlot -> curr -> theMessage;
+    // No message.
+    if (!messageLen){
+        printk("write if2\n");
+        return -EWOULDBLOCK;
+    }
+    // Buffer too small.
+    if (length < messageSlot -> curr-> messageLen){
+        printk("write if3\n");
+        return -ENOSPC;
     }
 
-    int i;
-    char* theMessage = messageSlot -> curr -> theMessage;
-    int messageLen = messageSlot -> curr -> messageLen;
+
     printk("Invoking device_read(%p,%d)\n", file, length);
     for( i = 0; i < messageLen; ++i )
     {
-       // if (-EFAULT == put_user(theMessage[i], &buffer[i])) {
-        //printk("error(%p)\n", file);
-        //return -EINVAL;
-        //}
+       put_user(theMessage[i], &buffer[i]);
     }
+
+    printk("Read the message %s with len %d\n", theMessage, messageLen);
 
     // return the number of input characters used
     return i;
@@ -113,7 +120,9 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 static long device_ioctl(struct file *file,
                          unsigned int ioctlCommandId,
                          unsigned long channelId) {
-    if (MSG_SLOT_CHANNEL != ioctlCommandId || !channelId) {
+
+    printk("Trying to ioctl\n");
+    if ((MSG_SLOT_CHANNEL != ioctlCommandId) || !channelId) {
         return -EINVAL;
     }
     // First channel made.
@@ -122,12 +131,15 @@ static long device_ioctl(struct file *file,
         messageSlot -> head -> messageLen = 0;
         messageSlot -> head -> next = NULL;
         messageSlot -> size ++;
+        printk("ioctl if1\n");
+        printk("Now on the awesome channel %d\n", messageSlot -> curr -> id);
         return SUCCESS;
     }
     // Not the first channel.
     else {
         // Stays on same channel.
         if (messageSlot -> curr -> id == channelId){
+            printk("ioctl if2\n");
             return SUCCESS;
         }
         Channel* node = messageSlot -> head;
@@ -144,6 +156,7 @@ static long device_ioctl(struct file *file,
             // No node with this channelId.
             Channel* newNode = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
             if (!newNode){
+                printk("ioctl if3\n");
                 return -EINVAL;
             }
             newNode -> id = channelId;
@@ -155,7 +168,7 @@ static long device_ioctl(struct file *file,
         }
     }
 
-    printk("Now on channel %d\n", file, messageSlot -> curr -> id);
+    printk("Now on the awesome channel %d\n", messageSlot -> curr -> id);
 
     return SUCCESS;
 }
