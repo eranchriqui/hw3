@@ -140,6 +140,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     int i;
     char* theMessage = messageSlot -> curr -> theMessage;
     printk("Invoking device_write(%p,%d)\n", file, length);
+    strcpy(messageSlot -> curr -> theMessage,"");
     for( i = 0; i < length; ++i )
     {
         get_user(theMessage[i], &buffer[i]);

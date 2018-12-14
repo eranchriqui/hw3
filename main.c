@@ -4,6 +4,7 @@
 #include <sys/ioctl.h>  /* ioctl */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 int main(int argc, char* argv[]) {
@@ -22,24 +23,28 @@ int main(int argc, char* argv[]) {
         printf ("Not enough args\n");
         exit(-1);
     }
+
+
+    /*
     ret_val = ioctl( file_desc, MSG_SLOT_CHANNEL, 3);
     ret_val = read( file_desc, userMsg3, strlen(argv[3]));
     printf("%s\n",userMsg3);
     ret_val = ioctl( file_desc, MSG_SLOT_CHANNEL, 2);
     ret_val = read(  file_desc, userMsg2, strlen(argv[2]));
     printf("%s\n",userMsg2);
+*/
 
-/*
     ret_val = ioctl( file_desc, MSG_SLOT_CHANNEL, 2);
     ret_val = write( file_desc, argv[2] , strlen(argv[2]));
     ret_val = ioctl( file_desc, MSG_SLOT_CHANNEL, 3);
     ret_val = write( file_desc, argv[3], strlen(argv[3]));
+
     ret_val = read(  file_desc, userMsg3, strlen(argv[3]));
     printf("%s\n",userMsg3);
+
     ret_val = ioctl( file_desc, MSG_SLOT_CHANNEL, 2);
     ret_val = read(  file_desc, userMsg2, strlen(argv[2]));
     printf("%s\n",userMsg2);
-*/
 
     close(file_desc);
     return 0;
