@@ -34,15 +34,67 @@ typedef struct MessageSlot
     size_t size;
 } MessageSlot;
 
-static MessageSlot* messageSlot;
+
+typedef struct Devices
+{
+    MessageSlot *slot;
+    int minor;
+    struct Devices next;
+
+} Devices;
+
+static MessageSlot* staticMessageSlot;
+static Devices* devicesHead;
+static Devices* devicesCurr;
+
 
 
 //================== DEVICE FUNCTIONS ===========================
 static int device_open(struct inode *inode,
                        struct file *file) {
 
-    printk("Invoking device_open(%p)\n", file);
-    printk("We have size %d\n", messageSlot -> size);
+    int iminor;
+    devicesCurr = devicesHead;
+    iminor = iminor(inode);
+
+    printk("Invoking device_open(%p) with minor %d\n", file, iminor);
+
+
+    // Look for the minor.
+    while (devicesCurr->minor != iminor && devicesCurr->next != NULL) {
+        devicesCurr = devicesCurr->next;
+    }
+
+    // First time we see this minor number, or first node.
+    if (devicesCurr -> next == NULL){
+
+        Devices * newNode = (Devices *) kmalloc(sizeof(Devices), GFP_KERNEL);
+        if (!newNode){
+            return -EINVAL;
+        }
+
+        devicesCurr -> next = newNode;
+        devicesCurr = newNode;
+
+        // Now working on the new node.
+
+        devicesCurr -> slot = (MessageSlot *) kmalloc(sizeof(MessageSlot), GFP_KERNEL);
+        if (!devicesCurr -> slot){
+            return -EINVAL;
+        }
+
+        devicesCurr -> slot -> head = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
+        if (!devicesCurr -> slot -> head){
+            return -EINVAL;
+        }
+        devicesCurr -> slot -> curr = devicesCurr -> slot -> head;
+        devicesCurr -> slot -> size = 0;
+        devicesCurr -> minor = iminor;
+    }
+    // Either way, we now have the relevant minor node.
+    messageSlot = devicesCurr -> slot;
+
+    printk("On minor %d we have %d channels\n",iminor, messageSlot -> size);
     return SUCCESS;
 }
 
@@ -199,16 +251,15 @@ static int __init simple_init(void) {
         return rc;
     }
 
-    messageSlot = (MessageSlot *) kmalloc(sizeof(MessageSlot), GFP_KERNEL);
-    if (!messageSlot){
+    devicesHead = (Devices *) kmalloc(sizeof(Devices),GFP_KERNEL);
+    if(!devicesHead){
         return -EINVAL;
     }
-    messageSlot -> head = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
-    if (!messageSlot -> head){
-        return -EINVAL;
-    }
-    messageSlot -> curr = messageSlot -> head;
-    messageSlot -> size = 0;
+
+    devicesHead -> slot = NULL;
+    devicesHead -> next = NULL;
+    devicesHead -> minor = -1;
+    devicesCurr = devicesHead;
 
     printk(KERN_INFO "message_slot: registered major number %d\n", MAJOR_NUM);
     return SUCCESS;
