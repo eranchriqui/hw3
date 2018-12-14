@@ -39,11 +39,11 @@ typedef struct Devices
 {
     MessageSlot *slot;
     int minor;
-    struct Devices next;
+    struct Devices* next;
 
 } Devices;
 
-static MessageSlot* staticMessageSlot;
+static MessageSlot* messageSlot;
 static Devices* devicesHead;
 static Devices* devicesCurr;
 
@@ -53,15 +53,15 @@ static Devices* devicesCurr;
 static int device_open(struct inode *inode,
                        struct file *file) {
 
-    int iminor;
+    int minor;
     devicesCurr = devicesHead;
-    iminor = iminor(inode);
+    minor = iminor(inode);
 
-    printk("Invoking device_open(%p) with minor %d\n", file, iminor);
+    printk("Invoking device_open(%p) with minor %d\n", file, minor);
 
 
     // Look for the minor.
-    while (devicesCurr->minor != iminor && devicesCurr->next != NULL) {
+    while (devicesCurr-> minor != minor && devicesCurr->next != NULL) {
         devicesCurr = devicesCurr->next;
     }
 
@@ -89,12 +89,12 @@ static int device_open(struct inode *inode,
         }
         devicesCurr -> slot -> curr = devicesCurr -> slot -> head;
         devicesCurr -> slot -> size = 0;
-        devicesCurr -> minor = iminor;
+        devicesCurr -> minor = minor;
     }
     // Either way, we now have the relevant minor node.
     messageSlot = devicesCurr -> slot;
 
-    printk("On minor %d we have %d channels\n",iminor, messageSlot -> size);
+    printk("On minor %d we have %d channels\n",minor, messageSlot -> size);
     return SUCCESS;
 }
 
@@ -145,12 +145,12 @@ static ssize_t device_read(struct file *file, char __user* buffer,size_t length,
     char* theMessage = messageSlot -> curr -> theMessage;
     // No message.
     if (!messageLen){
-        printk("write if2\n");
+        printk("read if1\n");
         return -EWOULDBLOCK;
     }
     // Buffer too small.
     if (length < messageSlot -> curr-> messageLen){
-        printk("write if3\n");
+        printk("read if2\n");
         return -ENOSPC;
     }
 
