@@ -31,6 +31,8 @@ static int device_open(struct inode *inode,
                        struct file *file) {
 
     int minor;
+    Devices* node;
+    Devices * newNode;
     devicesCurr = devicesHead;
     minor = iminor(inode);
 
@@ -38,7 +40,8 @@ static int device_open(struct inode *inode,
     printk("current minor is %d\n", devicesCurr -> minor);
     printk("Invoking device_open(%p) with minor %d\n", file, minor);
 
-    Devices* node = devicesHead;
+
+    node = devicesHead;
 
     // Look for the minor.
     while (devicesCurr -> next != NULL) {
@@ -51,7 +54,8 @@ static int device_open(struct inode *inode,
     // First time we see this minor number, or first node.
     if (devicesCurr -> minor != minor){
         printk("First time we see minor or first node\n");
-        Devices * newNode = (Devices *) kmalloc(sizeof(Devices), GFP_KERNEL);
+
+        newNode = (Devices *) kmalloc(sizeof(Devices), GFP_KERNEL);
         if (!newNode){
             return -EINVAL;
         }
@@ -78,18 +82,6 @@ static int device_open(struct inode *inode,
     // Either way, we now have the relevant minor node.
     messageSlot = devicesCurr -> slot;
 
-    printk("On minor %d we have %d channels and current channel is %d\n",
-            minor, messageSlot -> size, messageSlot -> curr -> id);
-    if(messageSlot -> size){
-        int i;
-        printk("Channels are: \n");
-        Channel * b = messageSlot->head;
-        while(b!=NULL){
-            printk("%d \n",b->id);
-            b=b->next;
-        }
-    }
-
     return SUCCESS;
 }
 
@@ -103,6 +95,8 @@ static int device_release(struct inode *inode,
 //---------------------------------------------------------------
 static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t*  offset) {
 
+    int i;
+    char* theMessage;
     printk("Trying to write %s\n", buffer);
 
     // No channel was set.
@@ -115,9 +109,8 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
         return -EMSGSIZE;
     }
 
-    int i;
-    char* theMessage = messageSlot -> curr -> theMessage;
-    printk("Invoking device_write(%p,%d)\n", file, length);
+    theMessage = messageSlot -> curr -> theMessage;
+    printk("Invoking device_write(%p)\n", file);
     strcpy(messageSlot -> curr -> theMessage,"");
     for( i = 0; i < length; ++i )
     {
@@ -132,14 +125,18 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 
 //---------------------------------------------------------------
 static ssize_t device_read(struct file *file, char __user* buffer,size_t length, loff_t* offset ) {
+    int i;
+    int messageLen;
+    char* theMessage;
 
     // No channel was set.
     if (messageSlot -> size == 0){
         return -EINVAL;
     }
-    int i;
-    int messageLen = messageSlot -> curr -> messageLen;
-    char* theMessage = messageSlot -> curr -> theMessage;
+
+    messageLen = messageSlot -> curr -> messageLen;
+    theMessage = messageSlot -> curr -> theMessage;
+
     // No message.
     if (!messageLen){
         printk("read if1\n");
@@ -152,7 +149,7 @@ static ssize_t device_read(struct file *file, char __user* buffer,size_t length,
     }
 
 
-    printk("Invoking device_read(%p,%d)\n", file, length);
+    printk("Invoking device_read(%p)\n", file);
     for( i = 0; i < messageLen; ++i )
     {
        put_user(theMessage[i], &buffer[i]);
@@ -170,7 +167,9 @@ static long device_ioctl(struct file *file,
                          unsigned int ioctlCommandId,
                          unsigned long channelId) {
 
-    printk("Trying to ioctl to channel %d\n", channelId);
+    Channel* node;
+    Channel* newNode;
+
     if ((MSG_SLOT_CHANNEL != ioctlCommandId) || !channelId) {
         return -EINVAL;
     }
@@ -192,7 +191,7 @@ static long device_ioctl(struct file *file,
             printk("Now stays on channel %d\n", messageSlot -> curr -> id);
             return SUCCESS;
         }
-        Channel* node = messageSlot -> head;
+        node = messageSlot -> head;
         // Looking for channelId.
         while (node -> next != NULL){
             // Found the relevant channel node.
@@ -210,7 +209,7 @@ static long device_ioctl(struct file *file,
         if(node -> id != channelId) {
             // No node with this channelId.
             printk("No node with this channelId.\n");
-            Channel* newNode = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
+            newNode = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
             if (newNode == NULL){
                 printk("ioctl if3\n");
                 return -EINVAL;
