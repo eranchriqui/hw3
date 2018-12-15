@@ -43,8 +43,6 @@ typedef struct Devices
     struct Devices* next;
 
 } Devices;
-static int freeAllDevices (Devices * device);
 
-static int freeAllChannels (Channel * chnl);
 
 #endif //HW3_MESSAGE_SLOT_H

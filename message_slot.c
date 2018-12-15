@@ -270,6 +270,16 @@ static int __init simple_init(void) {
     return SUCCESS;
 }
 
+static int freeAllChannels (Channel * chnl){
+    if(chnl == NULL){
+        return 0;
+    }
+    freeAllChannels(chnl -> next);
+    kfree(chnl);
+    return 0;
+}
+
+
 static int freeAllDevices (Devices * device){
     if(device == NULL){
         return 0;
@@ -283,14 +293,6 @@ static int freeAllDevices (Devices * device){
     printk("device%d freed\n",device->minor);
     return 0;
 
-}
-static int freeAllChannels (Channel * chnl){
-    if(chnl == NULL){
-        return 0;
-    }
-    freeAllChannels(chnl -> next);
-    kfree(chnl);
-    return 0;
 }
 
 
