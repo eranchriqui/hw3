@@ -181,7 +181,7 @@ static long device_ioctl(struct file *file,
         messageSlot -> head -> next = NULL;
         messageSlot -> size ++;
         printk("ioctl if1\n");
-        printk("Now on the awesome channel %d\n", messageSlot -> curr -> id);
+        printk("Now on channel %d\n", messageSlot -> curr -> id);
         return SUCCESS;
     }
     // Not the first channel.
@@ -189,7 +189,7 @@ static long device_ioctl(struct file *file,
         // Stays on same channel.
         if (messageSlot -> curr -> id == channelId){
             printk("ioctl if2\n");
-            printk("Now stays on the awesome channel %d\n", messageSlot -> curr -> id);
+            printk("Now stays on channel %d\n", messageSlot -> curr -> id);
             return SUCCESS;
         }
         Channel* node = messageSlot -> head;
@@ -224,7 +224,7 @@ static long device_ioctl(struct file *file,
         }
     }
 
-    printk("Now on the awesome channel %d\n", messageSlot -> curr -> id);
+    printk("Now on channel %d\n", messageSlot -> curr -> id);
 
     return SUCCESS;
 }
@@ -302,7 +302,7 @@ static void __exit
 simple_cleanup(void) {
     // Unregister the device
     // Should always succeed
-    //freeAllDevices(devicesHead);
+    freeAllDevices(devicesHead);
     unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
 }
 
