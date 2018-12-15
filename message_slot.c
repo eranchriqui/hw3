@@ -311,32 +311,3 @@ module_init(simple_init);
 module_exit(simple_cleanup);
 
 //========================= END OF FILE =========================
-
-/*
-typedef struct Channel
-{
-    int id;
-    char theMessage[BUF_SIZE];
-    int messageLen;
-    struct Channel* next;
-} Channel;
-
-typedef struct MessageSlot
-{
-    Channel* head;
-    Channel* curr;
-    size_t size;
-} MessageSlot;
-
-
-typedef struct Devices
-{
-    MessageSlot *slot;
-    int minor;
-    struct Devices* next;
-
-} Devices;
-static MessageSlot* messageSlot;
-static Devices* devicesHead;
-static Devices* devicesCurr;
-*/
