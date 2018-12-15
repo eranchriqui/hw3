@@ -19,29 +19,7 @@
 
 MODULE_LICENSE("GPL");
 
-typedef struct Channel
-{
-    int id;
-    char theMessage[BUF_SIZE];
-    int messageLen;
-    struct Channel* next;
-} Channel;
 
-typedef struct MessageSlot
-{
-    Channel* head;
-    Channel* curr;
-    size_t size;
-} MessageSlot;
-
-
-typedef struct Devices
-{
-    MessageSlot *slot;
-    int minor;
-    struct Devices* next;
-
-} Devices;
 
 static MessageSlot* messageSlot;
 static Devices* devicesHead;
@@ -233,7 +211,7 @@ static long device_ioctl(struct file *file,
             // No node with this channelId.
             printk("No node with this channelId.\n");
             Channel* newNode = (Channel *) kmalloc(sizeof(Channel), GFP_KERNEL);
-            if (!newNode){
+            if (newNode == NULL){
                 printk("ioctl if3\n");
                 return -EINVAL;
             }
@@ -292,6 +270,26 @@ static int __init simple_init(void) {
     return SUCCESS;
 }
 
+static int freeAllDevices (Devices * device){
+    printk("Now freeing device%d \n",device->minor);
+    if(device == NULL){
+        return 0;
+    }
+    freeAllDevices(device -> next);
+    freeAllChannels(device -> slot -> head);
+    kfree(device);
+    printk("device%d freed\n",device->minor);
+    return 0;
+
+}
+static int freeAllChannels (Channel * chnl){
+    if(chnl == NULL){
+        return 0;
+    }
+    freeAllChannels(chnl -> next);
+    kfree(chnl);
+    return 0;
+}
 
 
 //---------------------------------------------------------------
@@ -300,6 +298,7 @@ static void __exit
 simple_cleanup(void) {
     // Unregister the device
     // Should always succeed
+    freeAllDevices(devicesHead);
     unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
 }
 
@@ -308,3 +307,32 @@ module_init(simple_init);
 module_exit(simple_cleanup);
 
 //========================= END OF FILE =========================
+
+/*
+typedef struct Channel
+{
+    int id;
+    char theMessage[BUF_SIZE];
+    int messageLen;
+    struct Channel* next;
+} Channel;
+
+typedef struct MessageSlot
+{
+    Channel* head;
+    Channel* curr;
+    size_t size;
+} MessageSlot;
+
+
+typedef struct Devices
+{
+    MessageSlot *slot;
+    int minor;
+    struct Devices* next;
+
+} Devices;
+static MessageSlot* messageSlot;
+static Devices* devicesHead;
+static Devices* devicesCurr;
+*/
