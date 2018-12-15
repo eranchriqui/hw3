@@ -271,12 +271,14 @@ static int __init simple_init(void) {
 }
 
 static int freeAllDevices (Devices * device){
-    printk("Now freeing device%d \n",device->minor);
     if(device == NULL){
         return 0;
     }
+    printk("Now freeing device%d \n",device->minor);
     freeAllDevices(device -> next);
-    freeAllChannels(device -> slot -> head);
+    if(device -> slot != NULL) {
+        freeAllChannels(device->slot->head);
+    }
     kfree(device);
     printk("device%d freed\n",device->minor);
     return 0;
@@ -298,7 +300,7 @@ static void __exit
 simple_cleanup(void) {
     // Unregister the device
     // Should always succeed
-    freeAllDevices(devicesHead);
+    //freeAllDevices(devicesHead);
     unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
 }
 

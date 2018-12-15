@@ -16,13 +16,9 @@
 #define FALSE 0
 #define TRUE 1
 #include "message_slot.h"
-#include <linux/ioctl.h>
-#include <linux/kernel.h>   /* We're doing kernel work */
-#include <linux/module.h>   /* Specifically, a module */
-#include <linux/slab.h>
-#include <linux/fs.h>       /* for register_chrdev */
-#include <linux/uaccess.h>  /* for get_user and put_user */
 #include <linux/string.h>   /* for memset. NOTE - not string.h!*/
+
+
 
 typedef struct Channel
 {
