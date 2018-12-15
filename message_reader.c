@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
-
 int main(int argc, char* argv[]) {
     int file_desc;
     int ret_val;
@@ -37,7 +35,7 @@ int main(int argc, char* argv[]) {
     }
 
     printf("%.*s\n", ret_val, userMsg);
-
+    printf("Read ok\n");
     close(file_desc);
     return 0;
 }
