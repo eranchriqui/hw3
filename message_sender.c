@@ -22,11 +22,10 @@ int main(int argc, char* argv[]) {
         printf("Not enough args\n");
         exit(-1);
     }
-    ret_val = ioctl(file_desc, MSG_SLOT_CHANNEL, argv[2]);
+    ret_val = ioctl(file_desc, MSG_SLOT_CHANNEL, atoi(argv[2]));
     if(ret_val < 0){
         exit(ret_val);
     }
-
     ret_val =  write(file_desc, argv[3], strlen(argv[3]));
     if(ret_val < 0){
         exit(ret_val);
