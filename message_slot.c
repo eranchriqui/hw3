@@ -26,6 +26,68 @@ static Devices* devicesHead;
 static Devices* devicesCurr;
 
 
+
+static int getDeviceByMinor(int minor){
+
+    devicesCurr = devicesHead;
+
+
+    // Look for the minor.
+    while (devicesCurr -> next != NULL) {
+        if (devicesCurr->minor == minor) {
+            break;
+        }
+        devicesCurr = devicesCurr->next;
+    }
+
+    // First time we see this minor number, or first node.
+    if (devicesCurr -> minor != minor){
+        return -EINVAL;
+    }
+    // We now have the relevant minor node.
+    messageSlot = devicesCurr -> slot;
+    return SUCCESS;
+}
+
+
+
+static int updateCurrentChannel(int channelId){
+    Channel* node;
+
+    // First channel made.
+    if (messageSlot -> size == 0){
+        return -EINVAL;
+    }
+        // Not the first channel.
+    else {
+        // Stays on same channel.
+        if (messageSlot -> curr -> id == channelId){
+            return SUCCESS;
+        }
+        node = messageSlot -> head;
+        // Looking for channelId.
+        while (node -> next != NULL){
+            // Found the relevant channel node.
+            if (node -> id == channelId) {
+                break;
+            }
+            node = node -> next;
+        }
+
+        // Repeating the check for the last node too
+        if (node -> id == channelId) {
+            messageSlot->curr = node;
+        }
+       else {
+            // No node with this channelId.
+            return -EINVAL;
+        }
+    }
+
+    return SUCCESS;
+}
+
+
 //================== DEVICE FUNCTIONS ===========================
 static int device_open(struct inode *inode,
                        struct file *file) {
@@ -90,6 +152,16 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     int i;
     char* theMessage;
 
+
+    if(getDeviceByMinor(iminor(file_inode(file))) < 0) {
+        return -EINVAL;
+    }
+
+    if(updateCurrentChannel(*(int*)(file -> private_data)) < 0) {
+        return -EINVAL;
+    }
+
+
     // No channel was set.
     if (messageSlot -> size == 0){
         return -EINVAL;
@@ -112,9 +184,20 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 
 //---------------------------------------------------------------
 static ssize_t device_read(struct file *file, char __user* buffer,size_t length, loff_t* offset ) {
-    int i;
+    int i, minor, channelId;
     int messageLen;
     char* theMessage;
+
+
+    minor = iminor(file_inode(file));
+    channelId = *(int*)(file -> private_data);
+    if(getDeviceByMinor(minor) < 0) { // error
+        return -EINVAL;
+    }
+
+    if(updateCurrentChannel(channelId) < 0) { // error
+        return -EINVAL;
+    }
 
     // No channel was set.
     if (messageSlot -> size == 0){
@@ -150,10 +233,10 @@ static long device_ioctl(struct file *file,
 
     Channel* node;
     Channel* newNode;
-
     if ((MSG_SLOT_CHANNEL != ioctlCommandId) || !channelId) {
         return -EINVAL;
     }
+    file -> private_data = &channelId;
     // First channel made.
     if (messageSlot -> size == 0){
         messageSlot -> head -> id = (int) channelId;
