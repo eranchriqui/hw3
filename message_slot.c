@@ -157,7 +157,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
         return -EINVAL;
     }
 
-    if(updateCurrentChannel(*(int*)(file -> private_data)) < 0) {
+    if(updateCurrentChannel((int)(file -> private_data)) < 0) {
         return -EINVAL;
     }
 
@@ -190,7 +190,7 @@ static ssize_t device_read(struct file *file, char __user* buffer,size_t length,
 
 
     minor = iminor(file_inode(file));
-    channelId = *(int*)(file -> private_data);
+    channelId = (int)(file -> private_data);
     if(getDeviceByMinor(minor) < 0) { // error
         return -EINVAL;
     }
@@ -236,7 +236,7 @@ static long device_ioctl(struct file *file,
     if ((MSG_SLOT_CHANNEL != ioctlCommandId) || !channelId) {
         return -EINVAL;
     }
-    file -> private_data = &channelId;
+    file -> private_data = (void*)channelId;
     // First channel made.
     if (messageSlot -> size == 0){
         messageSlot -> head -> id = (int) channelId;
